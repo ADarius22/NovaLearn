@@ -1,4 +1,8 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import connectDB from './config/db';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -6,9 +10,12 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 
-// Routes
-app.get('/', (req: Request, res: Response) => {
-  res.send('Hello, World!');
+// Start Database Connection
+connectDB();
+
+// API Routes (Example)
+app.get('/', (req, res) => {
+  res.send('API is running...');
 });
 
 // Start Server
