@@ -1,17 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
 import User, { IUser } from '../models/User';
+import Instructor, { IInstructor } from '../models/Instructor'; // For instructor-specific validations
 
+// Extend Request interface to include authenticated user
 export interface AuthenticatedRequest extends Request {
-  user?: IUser;
+  user?: IUser; // Includes user, admin, or instructor depending on role
 }
 
+// Middleware to authenticate users based on session ID
 export const authenticate = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   const sessionId = req.headers.sessionid as string;
-  //console.log(sessionId);
 
   if (!sessionId) {
     res.status(401).json({ error: 'Unauthorized: Missing session ID' });
@@ -26,24 +28,21 @@ export const authenticate = async (
       return;
     }
 
-    (req as AuthenticatedRequest).user = user;
+    req.user = user; // Attach authenticated user to the request object
     next();
   } catch (error) {
     console.error('Authentication Error:', error);
-    res
-      .status(500)
-      .json({
-        error: 'Internal Server Error',
-        details: (error as Error).message,
-      });
+    res.status(500).json({
+      error: 'Internal Server Error',
+      details: (error as Error).message,
+    });
   }
 };
 
+// Middleware to authorize admin users
 export const authorizeAdmin = () => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const user = (req as any).user;
-
-    if (!user || user.role !== "admin") {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (!req.user || req.user.role !== 'admin') {
       res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
       return;
     }
@@ -52,12 +51,29 @@ export const authorizeAdmin = () => {
   };
 };
 
+// Middleware to authorize instructor users
 export const authorizeInstructor = () => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const user = (req as any).user;
-
-    if (!user || user.role !== 'instructor') {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (!req.user || req.user.role !== 'instructor') {
       res.status(403).json({ message: 'Access restricted to instructors only' });
+      return;
+    }
+
+    next();
+  };
+};
+
+// Middleware to ensure a user has the instructor application approved
+export const ensureApprovedInstructor = () => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user || req.user.role !== 'instructor') {
+      res.status(403).json({ message: 'Access restricted to instructors only' });
+      return;
+    }
+
+    const instructor = await Instructor.findById(req.user._id);
+    if (!instructor || instructor.applicationStatus !== 'approved') {
+      res.status(403).json({ message: 'Instructor application not approved' });
       return;
     }
 

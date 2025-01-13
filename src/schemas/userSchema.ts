@@ -15,4 +15,7 @@ export const userSchema = Joi.object({
     'string.min': 'Password should have a minimum length of 6',
     'any.required': 'Password is a required field',
   }),
+  role: Joi.string().valid('user', 'instructor', 'admin').default('user').messages({
+    'any.only': 'Role must be one of [user, instructor, admin]',
+  }),
 });

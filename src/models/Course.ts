@@ -15,6 +15,11 @@ export interface ICourse extends Document {
   }[]; // Array of review objects
   progress?: Record<string, string[]>; // Tracks user progress (userId -> lessonIds completed)
   instructor?: mongoose.Types.ObjectId; // Reference to the instructor
+  lessons?: {
+    lessonId: string;
+    title: string;
+    content?: string;
+  }[]; // Array of lessons in the course
 }
 
 const CourseSchema = new Schema<ICourse>({
@@ -22,18 +27,31 @@ const CourseSchema = new Schema<ICourse>({
   description: { type: String },
   duration: { type: Number, required: true },
   createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  participants: [{ type: Schema.Types.ObjectId, ref: "User" }],
-  materials: [{ type: String }], // Array of strings (file paths or URLs)
-  reviews: [
-    {
-      user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-      rating: { type: Number, required: true, min: 1, max: 5 },
-      comment: { type: String },
-      createdAt: { type: Date, default: Date.now },
-    },
-  ],
-  progress: { type: Map, of: [String] }, // Maps userId to an array of completed lesson IDs
-  instructor: { type: Schema.Types.ObjectId, ref: "User" }, // Reference to the instructor
+  participants: { type: [{ type: Schema.Types.ObjectId, ref: "User" }], default: [] },
+  materials: { type: [String], default: [] },
+  reviews: {
+    type: [
+      {
+        user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+        rating: { type: Number, required: true, min: 1, max: 5 },
+        comment: { type: String },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    default: [],
+  },
+  progress: { type: Map, of: [String], default: () => new Map() },
+  instructor: { type: Schema.Types.ObjectId, ref: "User" },
+  lessons: {
+    type: [
+      {
+        lessonId: { type: String, required: true },
+        title: { type: String, required: true },
+        content: { type: String },
+      },
+    ],
+    default: [],
+  },
 });
 
 export default mongoose.model<ICourse>("Course", CourseSchema);
