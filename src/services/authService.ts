@@ -2,6 +2,15 @@ import User, { IUser } from '../models/User';
 import md5 from 'md5';
 import { v4 as uuidv4 } from 'uuid';
 
+interface RegisterInput {
+  name: string;
+  email: string;
+  password: string;
+  role?: 'admin' | 'user' | 'instructor';
+}
+
+
+
 export const loginUser = async (
   email: string,
   password: string
@@ -15,12 +24,6 @@ export const loginUser = async (
   return user.sessionId;
 };
 
-interface RegisterInput {
-  name: string;
-  email: string;
-  password: string;
-  role?: 'admin' | 'user';
-}
 
 export const registerUser = async ({
   name,

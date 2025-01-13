@@ -27,4 +27,5 @@ router.put(
   userController.promoteUserToAdmin
 );
 
+
 export default router;

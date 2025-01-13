@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as userService from '../services/userService';
+import User from '../models/User';
 
 export const promoteUserToAdmin = async (
   req: Request,
@@ -142,3 +143,39 @@ export const logoutUser = async (
       });
   }
 };
+
+export const reviewInstructorApplication = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    const { decision, reason } = req.body; // `decision` should be 'approved' or 'rejected'
+
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    if (decision === 'approved') {
+      user.role = 'instructor';
+      user.applicationStatus = 'approved';
+    } else if (decision === 'rejected') {
+      user.applicationStatus = 'rejected';
+      user.documents = []; // Clear uploaded documents if rejected
+    } else {
+      res.status(400).json({ error: 'Invalid decision' });
+      return;
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      message: `Application ${decision} successfully`,
+      user,
+      reason: decision === 'rejected' ? reason : undefined,
+    });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+};
+
+

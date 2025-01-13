@@ -39,12 +39,25 @@ export const authenticate = async (
   }
 };
 
-export const authorizeAdmin = (roles: Array<'admin' | 'user'>) => {
+export const authorizeAdmin = (roles: Array<'admin' | 'user' | 'instructor'>) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     const user = (req as AuthenticatedRequest).user;
 
     if (!user || !roles.includes(user.role)) {
       res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
+      return;
+    }
+
+    next();
+  };
+};
+
+export const authorizeInstructor = () => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const user = (req as any).user;
+
+    if (!user || user.role !== 'instructor') {
+      res.status(403).json({ message: 'Access restricted to instructors only' });
       return;
     }
 
