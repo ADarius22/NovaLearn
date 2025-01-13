@@ -35,15 +35,3 @@ export const reviewInstructorApplication = async (
   await instructor.save();
   return instructor;
 };
-
-// Get all users
-export const getAllUsers = async (): Promise<IUser[]> => {
-  return await User.find();
-};
-
-// Delete a user
-export const deleteUser = async (userId: string): Promise<IUser | null> => {
-  const user = await User.findByIdAndDelete(userId);
-  if (!user) throw new Error('User not found.');
-  return user;
-};

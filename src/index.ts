@@ -1,9 +1,11 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import connectDB from './config/db';
-import userRoutes from './routes/userRoutes';
-import instructorRoutes from './routes/instructorRoutes';
-import adminRoutes from './routes/adminRoutes';
+import userRoutes from './routes/usersRoutes/userRoutes';
+import instructorRoutes from './routes/usersRoutes/instructorRoutes';
+import adminRoutes from './routes/usersRoutes/adminRoutes';
+import courseRoutes from './routes/coursesRoutes/courseRoutes';
+import studentRoutes from './routes/usersRoutes/studentRoutes';
 
 dotenv.config();
 
@@ -20,6 +22,8 @@ app.use(express.json());
 app.use('/api/users', userRoutes); // General user routes
 app.use('/api/instructors', instructorRoutes); // Instructor-specific routes
 app.use('/api/admin', adminRoutes); // Admin-specific routes
+app.use('/api/courses', courseRoutes); // Course routes
+app.use('/api/students', studentRoutes); // Student-specific routes
 
 // Start the server
 const PORT = process.env.PORT || 5000;
