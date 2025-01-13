@@ -11,3 +11,6 @@ router.get('/courses', courseController.getCourses);
 router.delete('/courses/:courseId', courseController.deleteCourse);
 router.put('/courses/:courseId/progress', courseController.updateCourseProgress);
 router.get('/courses', courseController.getCourses);
+
+
+export default router;

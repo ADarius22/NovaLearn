@@ -9,3 +9,5 @@ router.use(authenticate); // Authentication middleware
 
 router.post('/courses/:courseId/enroll', studentController.enrollInCourse);
 router.post('/courses/:courseId/reviews', studentController.addCourseReview);
+
+export default router;
