@@ -17,26 +17,6 @@ interface RegisterUserInput {
 // Utility function for password hashing
 const hashPassword = (password: string): string => md5(password);
 
-export const registerUser = async (input: RegisterUserInput): Promise<void> => {
-  const { name, email, password, role = 'user' } = input;
-  verifyInput(email, name, password);
-
-  const existingUser = await User.findOne({ email });
-  if (existingUser) throw new Error('Email is already registered.');
-
-  const hashedPassword = hashPassword(password);
-  const sessionId = uuidv4();
-
-  const newUser = new User({
-    name,
-    email,
-    password: hashedPassword,
-    sessionId,
-    role,
-  });
-
-  await newUser.save();
-};
 
 export const loginUser = async (email: string, password: string): Promise<string> => {
   const user = await User.findOne({ email, password: hashPassword(password) });
@@ -48,20 +28,6 @@ export const loginUser = async (email: string, password: string): Promise<string
   return user.sessionId;
 };
 
-export const getUserProfile = async (sessionId: string): Promise<IUser | null> => {
-  return await User.findOne({ sessionId });
-};
-
-export const updateUserProfile = async (
-  sessionId: string,
-  updateData: Partial<IUser>
-): Promise<IUser | null> => {
-  return await User.findOneAndUpdate({ sessionId }, updateData, { new: true });
-};
-
-export const deleteUserProfile = async (sessionId: string): Promise<IUser | null> => {
-  return await User.findOneAndDelete({ sessionId });
-};
 
 export const logoutUser = async (sessionId: string): Promise<void> => {
   const user = await User.findOne({ sessionId });

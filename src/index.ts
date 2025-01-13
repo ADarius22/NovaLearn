@@ -1,9 +1,9 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import connectDB from './config/db';
-import userRoutes from './routes/userRoutes';
-import instructorRoutes from './routes/instructorRoutes';
-import adminRoutes from './routes/adminRoutes';
+import userRoutes from './routes/usersRoutes/userRoutes';
+import instructorRoutes from './routes/usersRoutes/instructorRoutes';
+import adminRoutes from './routes/usersRoutes/adminRoutes';
 
 dotenv.config();
 

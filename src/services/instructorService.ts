@@ -41,12 +41,3 @@ export const registerInstructor = async (input: RegisterInstructorInput): Promis
   await newUser.save();
   return newUser;
 };
-
-// Promote a user to instructor
-export const promoteToInstructor = async (userId: string): Promise<IInstructor | null> => {
-  return await User.findByIdAndUpdate(
-    userId,
-    { role: 'instructor', applicationStatus: 'approved' },
-    { new: true }
-  );
-};

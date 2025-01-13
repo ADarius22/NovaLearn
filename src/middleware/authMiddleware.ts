@@ -63,6 +63,17 @@ export const authorizeInstructor = () => {
   };
 };
 
+export const authorizeUser = () => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (!req.user || req.user.role !== 'user') {
+      res.status(403).json({ message: 'Access restricted to users only' });
+      return;
+    }
+
+    next();
+  };
+}
+
 // Middleware to ensure a user has the instructor application approved
 export const ensureApprovedInstructor = () => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
