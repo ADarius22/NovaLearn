@@ -25,7 +25,6 @@ export const createCourse = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-
 // Get a specific course by ID
 export const getCourseById = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -216,28 +215,6 @@ export const updateCourseProgress = async (req: Request, res: Response): Promise
 
     await course.save();
     res.status(200).json({ message: "Progress updated", progress: course.progress[userId] });
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
-};
-
-export const assignInstructor = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { courseId, instructorId } = req.params;
-
-    const course = await Course.findById(courseId);
-    if (!course) {
-      res.status(404).json({ message: "Course not found" });
-      return;
-    }
-
-    // Convert instructorId to ObjectId
-    const instructorObjectId = new mongoose.Types.ObjectId(instructorId);
-
-    course.instructor = instructorObjectId;
-    await course.save();
-
-    res.status(200).json({ message: "Instructor assigned successfully" });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }

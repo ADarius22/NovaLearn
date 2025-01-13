@@ -39,11 +39,11 @@ export const authenticate = async (
   }
 };
 
-export const authorizeAdmin = (roles: Array<'admin' | 'user' | 'instructor'>) => {
+export const authorizeAdmin = () => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const user = (req as AuthenticatedRequest).user;
+    const user = (req as any).user;
 
-    if (!user || !roles.includes(user.role)) {
+    if (!user || user.role !== "admin") {
       res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
       return;
     }
