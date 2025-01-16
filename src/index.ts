@@ -6,6 +6,7 @@ import instructorRoutes from './routes/usersRoutes/instructorRoutes';
 import adminRoutes from './routes/usersRoutes/adminRoutes';
 import courseRoutes from './routes/coursesRoutes/courseRoutes';
 import studentRoutes from './routes/usersRoutes/studentRoutes';
+import quizRoutes from './routes/coursesRoutes/quizRoutes';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use('/api/instructors', instructorRoutes); // Instructor-specific routes
 app.use('/api/admin', adminRoutes); // Admin-specific routes
 app.use('/api/courses', courseRoutes); // Course routes
 app.use('/api/students', studentRoutes); // Student-specific routes
+app.use('/api/quizzes', quizRoutes);
 
 // Start the server
 const PORT = process.env.PORT || 5000;

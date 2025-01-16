@@ -20,6 +20,7 @@ export interface ICourse extends Document {
     title: string;
     content?: string;
   }[]; // Array of lessons in the course
+  quizzes?: mongoose.Types.ObjectId[]; // Array of quiz IDs associated with the course
 }
 
 const CourseSchema = new Schema<ICourse>({
@@ -52,6 +53,10 @@ const CourseSchema = new Schema<ICourse>({
     ],
     default: [],
   },
+  quizzes: {
+    type: [{ type: Schema.Types.ObjectId, ref: "Quiz" }],
+    default: [],
+  }, // Added quizzes field
 });
 
 export default mongoose.model<ICourse>("Course", CourseSchema);

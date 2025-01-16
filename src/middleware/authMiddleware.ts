@@ -51,10 +51,13 @@ export const authorizeAdmin = () => {
   };
 };
 
+
 // Middleware to authorize instructor users
 export const authorizeInstructor = () => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (!req.user || req.user.role !== 'instructor') {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const authenticatedReq = req as AuthenticatedRequest;
+
+    if (!authenticatedReq.user || authenticatedReq.user.role !== 'instructor') {
       res.status(403).json({ message: 'Access restricted to instructors only' });
       return;
     }
@@ -62,6 +65,7 @@ export const authorizeInstructor = () => {
     next();
   };
 };
+
 
 export const authorizeUser = () => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
