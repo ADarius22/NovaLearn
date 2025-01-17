@@ -18,6 +18,8 @@ router.use(authenticate);
 router.get('/users/:userId', userController.getUserById);
 router.get('/users', userController.getAllUsers);
 router.delete('/users/:userId', authorizeUser(), authorizeAdmin(), userController.deleteUser);
+router.put('/users/:userId', userController.updateUser);
+router.post('/users/:userId/logout', userController.logout);
 
 
 

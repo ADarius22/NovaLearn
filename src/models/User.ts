@@ -4,7 +4,7 @@ export interface IUser extends Document {
     name: string;
     email: string;
     password: string;
-    role: 'admin' | 'user' | 'instructor'; // Allow all possible roles
+    role: "admin" | "user" | "instructor" | "student"; // Allow all possible roles
     sessionId?: string;
   }
   

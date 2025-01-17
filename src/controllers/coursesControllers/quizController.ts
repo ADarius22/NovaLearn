@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import Quiz from "../../models/Quiz";
 import Course from "../../models/Course";
 import { AuthenticatedRequest } from "../../middleware/authMiddleware";
+import { RequestHandler } from "express";
+
 
 // Create a quiz for a course
 export const createQuiz = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -123,3 +125,23 @@ export const updateQuiz = async (req: AuthenticatedRequest, res: Response): Prom
     }
   };
   
+  export const getQuizzesByCourseId: RequestHandler<{ courseId: string }> = async (req, res): Promise<void> => {
+    try {
+      const { courseId } = req.params;
+  
+      if (!mongoose.Types.ObjectId.isValid(courseId)) {
+        res.status(400).json({ message: "Invalid courseId" });
+        return;
+      }
+  
+      const quizzes = await Quiz.find({ course: courseId });
+      if (!quizzes || quizzes.length === 0) {
+        res.status(404).json({ message: "No quizzes found for this course." });
+        return;
+      }
+  
+      res.status(200).json(quizzes);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  };

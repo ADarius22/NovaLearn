@@ -11,7 +11,7 @@ interface RegisterUserInput {
   name: string;
   email: string;
   password: string;
-  role?: 'admin' | 'user' | 'instructor';
+  role?: 'admin' | 'user' | 'instructor' | 'student';
 }
 
 // Utility function for password hashing

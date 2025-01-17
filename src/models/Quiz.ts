@@ -39,7 +39,7 @@ const QuizSchema = new Schema<IQuiz>({
   results: {
     type: [
       {
-        student: { type: mongoose.Types.ObjectId, ref: 'Student', required: true },
+        student: { type: mongoose.Types.ObjectId, ref: 'student', required: true },
         score: { type: Number, required: true },
         passed: { type: Boolean, required: true },
         detailedResults: { type: [{ question: String, correct: Boolean }], required: true },

@@ -34,27 +34,40 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
   };
   
-// Register as a general user
-export const registerUser = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { name, email, password } = req.body;
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      res.status(400).json({ message: 'Email already registered' });
-      return;
+  export const registerUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { name, email, password } = req.body;
+  
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        res.status(400).json({ message: "Email already registered" });
+        return;
+      }
+  
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = new User({
+        name,
+        email,
+        password: hashedPassword,
+        role: "student", // Default role set to 'student'
+      });
+  
+      await newUser.save();
+  
+      res.status(201).json({
+        message: "User registered successfully as a student",
+        user: {
+          id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
     }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, email, password: hashedPassword, role: 'user' });
-    await newUser.save();
-
-    res.status(201).json({ message: 'User registered successfully', user: newUser });
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
-};
-
+  };
+  
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {
     try {
       const { userId } = req.params;

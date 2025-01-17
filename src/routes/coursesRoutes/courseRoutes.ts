@@ -10,7 +10,9 @@ router.use(authenticate); // Authentication middleware
 router.get('/courses', courseController.getCourses);
 router.delete('/courses/:courseId', courseController.deleteCourse);
 router.put('/courses/:courseId/progress', courseController.updateCourseProgress);
-router.get('/courses', courseController.getCourses);
-
+router.get('/courses/:courseId', courseController.getCourseById);
+router.post('/courses', courseController.createCourse);
+router.put('/courses/:courseId', courseController.updateCourse);
+  
 
 export default router;
