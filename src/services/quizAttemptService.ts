@@ -30,7 +30,7 @@ export const submit = async (
   const { score } = calculateScore(
     quiz.questions.map((q: any) => ({
       _id: q._id,
-      correctAnswer: q.correctAnswers[0], // Assuming the first correct answer is used
+      correctAnswer: q.correctAnswers[0], 
     })),
     answers
   );
@@ -45,7 +45,7 @@ export const submit = async (
   });
 };
 
-export const latestByStudent = (studentId: string, limit = 5) =>
+export const getAttempts  = (studentId: string, limit = 5) =>
   QuizAttempt.find({ student: studentId })
     .populate('quiz')
     .sort({ createdAt: -1 })

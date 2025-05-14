@@ -1,20 +1,39 @@
 import { Router } from 'express';
-import * as studentController from '../../controllers/usersControllers/studentController';
-import { authenticate } from '../../middleware/authMiddleware';
-import { takeQuiz, getQuizResults } from '../../controllers/usersControllers/studentController';
+import {
+  enrollInCourse,
+  unenrollFromCourse,
+  getEnrolledCourses,
+  markLessonCompleted,
+  submitQuizAttempt,
+  getQuizAttempts,
+} from '../../controllers/usersControllers/studentController';
+
+import {
+  authenticate,
+  authorizeStudent,
+} from '../../middleware/authMiddleware';
+
 const router = Router();
 
+// Student-only routes
+router.use(authenticate, authorizeStudent);
 
-router.use(authenticate); // Authentication middleware
+// Enroll in a course
+router.post('/enroll/:courseId', enrollInCourse);
 
+// Unenroll from a course
+router.delete('/unenroll/:courseId', unenrollFromCourse);
 
-router.post('/courses/:courseId/enroll', studentController.enrollInCourse);
-router.post('/courses/:courseId/reviews', studentController.addCourseReview);
+// List enrolled courses
+router.get('/courses', getEnrolledCourses);
 
-// Route for taking a quiz
-router.post('/quiz/:quizId/take', authenticate, takeQuiz);
+// Mark lesson as completed
+router.patch('/progress/:courseId/:lessonId', markLessonCompleted);
 
-// Route for viewing quiz details or results
-router.get('/quiz/:quizId', authenticate, getQuizResults);
+// Submit quiz attempt
+router.post('/attempt/:quizId', submitQuizAttempt);
+
+// Get quiz attempt history
+router.get('/attempts', getQuizAttempts);
 
 export default router;

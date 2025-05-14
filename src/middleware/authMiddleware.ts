@@ -1,17 +1,22 @@
 import jwt from 'jsonwebtoken';
-import { Request, Response, NextFunction } from 'express';
-import {User, UserRole, Instructor } from '../models/User';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { User, UserRole, Instructor } from '../models/User';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_default_secret';
 
-// Base auth – every route that needs login
-export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+// ─────────────────────────────────────────────────────────────
+// Authenticate middleware
+// ─────────────────────────────────────────────────────────────
+
+export const authenticate: RequestHandler = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid token' });
+    res.status(401).json({ error: 'Missing or invalid token' });
+    return;
   }
 
   const token = authHeader.split(' ')[1];
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as {
       id: string;
@@ -23,49 +28,59 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     req.user = decoded;
     next();
   } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    res.status(401).json({ error: 'Invalid or expired token' });
+    return;
   }
 };
 
-// Only admin
-export const authorizeAdmin = (req: Request, res: Response, next: NextFunction) => {
+// ─────────────────────────────────────────────────────────────
+// Role-based middleware
+// ─────────────────────────────────────────────────────────────
+
+export const authorizeAdmin: RequestHandler = (req, res, next) => {
   if (req.user?.role !== UserRole.ADMIN) {
-    return res.status(403).json({ error: 'Admin access only' });
+    res.status(403).json({ error: 'Admin access only' });
+    return;
   }
   next();
 };
 
-// Only instructor
-export const authorizeInstructor = (req: Request, res: Response, next: NextFunction) => {
+export const authorizeInstructor: RequestHandler = (req, res, next) => {
   if (req.user?.role !== UserRole.INSTRUCTOR) {
-    return res.status(403).json({ error: 'Instructor access only' });
+    res.status(403).json({ error: 'Instructor access only' });
+    return;
   }
   next();
 };
 
-// Only student
-export const authorizeStudent = (req: Request, res: Response, next: NextFunction) => {
+export const authorizeStudent: RequestHandler = (req, res, next) => {
   if (req.user?.role !== UserRole.STUDENT) {
-    return res.status(403).json({ error: 'Student access only' });
+    res.status(403).json({ error: 'Student access only' });
+    return;
   }
   next();
 };
 
-// Instructor must be approved
-export const ensureApprovedInstructor = async (req: Request, res: Response, next: NextFunction) => {
+// ─────────────────────────────────────────────────────────────
+// Ensure instructor is approved
+// ─────────────────────────────────────────────────────────────
+
+export const ensureApprovedInstructor: RequestHandler = async (req, res, next) => {
   if (req.user?.role !== UserRole.INSTRUCTOR) {
-    return res.status(403).json({ error: 'Instructor access only' });
+    res.status(403).json({ error: 'Instructor access only' });
+    return;
   }
 
   try {
     const instructor = await Instructor.findById(req.user.id).select('applicationStatus');
-
     if (!instructor || instructor.applicationStatus !== 'approved') {
-      return res.status(403).json({ error: 'Instructor not approved yet' });
+      res.status(403).json({ error: 'Instructor not approved yet' });
+      return;
     }
 
     next();
   } catch {
-    return res.status(500).json({ error: 'Could not validate instructor status' });
+    res.status(500).json({ error: 'Could not validate instructor status' });
+    return;
   }
 };
