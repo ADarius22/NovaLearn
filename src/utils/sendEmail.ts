@@ -1,9 +1,3 @@
-// src/utils/sendEmail.ts
-// -----------------------------------------------------------------------------
-//  Development stub – logs to console instead of sending.
-//  Replace with a real provider (Nodemailer, SendGrid, SES) when ready.
-// -----------------------------------------------------------------------------
-
 export default async function sendEmail(
     to: string,
     subject: string,
