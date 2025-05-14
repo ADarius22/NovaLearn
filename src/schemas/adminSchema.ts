@@ -1,6 +1,13 @@
 import Joi from 'joi';
-import { userSchema } from './userSchema';
+import { UserRole } from '../models/User';
 
-export const adminSchema = userSchema.keys({
-  // Add admin-specific fields if required
+export const adminSchema = Joi.object({
+  name: Joi.string().min(2).max(50).required(),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).required(),
+  role: Joi.string().valid(UserRole.ADMIN).required(),
+
+  permissions: Joi.array().items(Joi.string()).optional(),
+
+  sessionId: Joi.string().optional(),
 });

@@ -1,6 +1,6 @@
 // userRoutes.ts
 import { Router } from 'express';
-import * as userController from '../../controllers/usersControllers/userControllers';
+import * as userController from '../../controllers/usersControllers/authController';
 import * as courseController from '../../controllers/coursesControllers/coursesController';
 import * as studentController from '../../controllers/usersControllers/studentController';
 import { authenticate, authorizeAdmin, authorizeUser } from '../../middleware/authMiddleware';

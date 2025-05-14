@@ -1,38 +1,62 @@
-// userService.ts
-// User-specific services
-import User, { IUser } from '../models/User';
-import md5 from 'md5';
-import { v4 as uuidv4 } from 'uuid';
-import bcrypt from 'bcrypt';
-import { verifyInputCredentials as verifyInput } from '../utils/index';
+// src/services/user.service.ts
+// ────────────────────────────────────────────────────────────────────────────────
+//  Generic user‑centric DB helpers (no auth logic).
+//  Used by profileController, adminController, etc.
+// ────────────────────────────────────────────────────────────────────────────────
 
-// Interfaces for user-related inputs
-interface RegisterUserInput {
-  name: string;
-  email: string;
-  password: string;
-  role?: 'admin' | 'user' | 'instructor' | 'student';
+import { User, IUserBase, UserRole } from '../models/User';
+import { FilterQuery, UpdateQuery } from 'mongoose';
+
+// ────────────────────────────────────────────────────────────────────────────────
+//  CRUD helpers
+// ────────────────────────────────────────────────────────────────────────────────
+
+export const findById = (id: string) =>
+  User.findById(id).select('-password -resetPassword').lean();
+
+export const update = (id: string, payload: UpdateQuery<IUserBase>) =>
+  User.findByIdAndUpdate(id, payload, {
+    new: true,
+    runValidators: true,
+    projection: '-password -resetPassword',
+  }).lean();
+
+export const softDelete = (id: string) =>
+  User.findByIdAndUpdate(id, { $set: { isDeleted: true } }, { new: false });
+
+export const hardDelete = (id: string) => User.findByIdAndDelete(id);
+
+// ────────────────────────────────────────────────────────────────────────────────
+//  Admin helpers
+// ────────────────────────────────────────────────────────────────────────────────
+
+interface PaginatedOpts {
+  role?: UserRole;
+  search?: string;
+  page?: number;
+  limit?: number;
 }
 
-// Utility function for password hashing
-const hashPassword = (password: string): string => md5(password);
+export const listPaginated = async ({
+  role,
+  search = '',
+  page = 1,
+  limit = 20,
+}: PaginatedOpts) => {
+  const filter: FilterQuery<IUserBase> = { isDeleted: { $ne: true } };
+  if (role) filter.role = role;
+  if (search) filter.name = { $regex: search, $options: 'i' };
 
+  const skip = (page - 1) * limit;
 
-export const loginUser = async (email: string, password: string): Promise<string> => {
-  const user = await User.findOne({ email, password: hashPassword(password) });
-  if (!user) throw new Error('Invalid email or password.');
+  const [items, total] = await Promise.all([
+    User.find(filter)
+      .select('-password -resetPassword')
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    User.countDocuments(filter),
+  ]);
 
-  user.sessionId = uuidv4();
-  await user.save();
-
-  return user.sessionId;
-};
-
-
-export const logoutUser = async (sessionId: string): Promise<void> => {
-  const user = await User.findOne({ sessionId });
-  if (user) {
-    user.sessionId = undefined;
-    await user.save();
-  }
+  return { page, limit, total, items };
 };

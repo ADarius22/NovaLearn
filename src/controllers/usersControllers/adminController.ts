@@ -1,90 +1,84 @@
+// src/controllers/admin.controller.ts
+// ────────────────────────────────────────────────────────────────────────────────
+//  Admin-only maintenance endpoints
+//  • List / view users (with optional role filter, pagination)
+//  • Promote a student to instructor (creates pending application)
+//  • Approve or revoke an instructor application
+//  • Hard-delete any user
+//  (All heavy lifting lives in AdminService / UserService)
+// ────────────────────────────────────────────────────────────────────────────────
+
 import { Request, Response } from 'express';
-import Admin from '../../models/Admin'; // Admin model
-import Instructor, { IInstructor } from '../../models/Instructor'; // Instructor model
-import User from '../../models/User'; // User model
-import Course from '../../models/Course'; // Course model
-import mongoose from 'mongoose';
-import * as adminService from "../../services/adminService";
-// Approve or reject instructor applications
-export const reviewInstructorApplication = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { userId } = req.params;
-    const { decision, reason } = req.body; // `decision` should be 'approved' or 'rejected'
+import AdminService from '../services/admin.service';
+import UserService from '../services/user.service';
+import { UserRole } from '../../models/user.model';
 
-    // Use the Instructor model for applications
-    const instructor = await Instructor.findById(userId);
-    if (!instructor) {
-      res.status(404).json({ error: 'Instructor not found' });
-      return;
-    }
+// ────────────────────────────────────────────────────────────────────────────────
+//  1.  User management
+// ────────────────────────────────────────────────────────────────────────────────
 
-    if (decision === 'approved') {
-      instructor.role = 'instructor';
-      instructor.applicationStatus = 'approved';
-    } else if (decision === 'rejected') {
-      instructor.applicationStatus = 'rejected';
-      instructor.documents = []; // Clear documents if rejected
-    } else {
-      res.status(400).json({ error: 'Invalid decision' });
-      return;
-    }
+// GET /admin/users?role=student&page=1&limit=20
+export const listUsers = async (req: Request, res: Response) => {
+  const {
+    role,
+    page = '1',
+    limit = '20',
+    search = '',
+  } = req.query as Record<string, string>;
 
-    await instructor.save();
+  const result = await UserService.listPaginated({
+    role: role as UserRole | undefined,
+    search,
+    page: Number(page),
+    limit: Number(limit),
+  });
 
-    res.status(200).json({
-      message: `Application ${decision} successfully`,
-      instructor,
-      reason: decision === 'rejected' ? reason : undefined,
-    });
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
+  res.json(result);
 };
 
-
-// Promote a user to instructor (route handler)
-export const promoteUserToInstructor = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { userId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      res.status(400).json({ message: 'Invalid user ID' });
-      return;
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { role: 'instructor', applicationStatus: 'approved' },
-      { new: true }
-    );
-
-    if (!updatedUser) {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
-
-    res.status(200).json({ message: 'User promoted to instructor successfully', user: updatedUser });
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+// GET /admin/users/:id
+export const getUser = async (req: Request, res: Response) => {
+  const user = await UserService.findById(req.params.id);
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
   }
+  res.json(user);
 };
 
-// Promote a user to admin
-export const promoteToAdmin = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { userId } = req.params;
+// DELETE /admin/users/:id  (hard delete)
+export const deleteUser = async (req: Request, res: Response) => {
+  await UserService.hardDelete(req.params.id);
+  res.status(204).send();
+};
 
-    const updatedAdmin = await adminService.promoteToAdmin(userId);
-    if (!updatedAdmin) {
-      res.status(404).json({ message: "User not found or already an admin." });
-      return;
-    }
+// ────────────────────────────────────────────────────────────────────────────────
+//  2.  Instructor promotion / approval flow
+// ────────────────────────────────────────────────────────────────────────────────
 
-    res.status(200).json({
-      message: "User promoted to admin successfully.",
-      admin: updatedAdmin,
-    });
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
+// PATCH /admin/users/:id/promote
+export const promoteToInstructor = async (req: Request, res: Response) => {
+  const instructorDoc = await AdminService.promoteToInstructor(req.params.id);
+  res.json({
+    message: 'User promoted to instructor (pending approval)',
+    instructor: instructorDoc,
+  });
+};
+
+// PATCH /admin/instructors/:id/approve
+export const approveInstructor = async (req: Request, res: Response) => {
+  const instructorDoc = await AdminService.approveInstructor(req.params.id);
+  res.json({
+    message: 'Instructor application approved',
+    instructor: instructorDoc,
+  });
+};
+
+// PATCH /admin/instructors/:id/revoke
+export const revokeInstructor = async (req: Request, res: Response) => {
+  const instructorDoc = await AdminService.revokeInstructor(req.params.id);
+  res.json({
+    message: 'Instructor privileges revoked',
+    instructor: instructorDoc,
+  });
 };

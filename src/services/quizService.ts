@@ -1,24 +1,51 @@
-import Quiz from '../models/Quiz';
+// src/services/quiz.service.ts
+// ────────────────────────────────────────────────────────────────────────────────
+//  CRUD helpers for quizzes. Scoring / submissions live in quizAttempt.service.
+// ────────────────────────────────────────────────────────────────────────────────
 
-export const getQuizById = async (quizId: string) => {
-  return await Quiz.findById(quizId).populate('course');
+import Quiz, { IQuiz } from '../models/Quiz';
+import { Types, FilterQuery } from 'mongoose';
+
+/* ───────────────────────── 1. Public helpers ─────────────────────────────── */
+
+export const getById = (id: string) => Quiz.findById(id).lean<IQuiz>();
+
+export const listByCourse = (
+  courseId: string,
+  projection: Record<string, 0 | 1> = {},
+) => Quiz.find({ course: courseId }, projection).lean<IQuiz[]>();
+
+/* ───────────────────────── 2. Instructor helpers ─────────────────────────── */
+
+export const listByInstructor = (
+  instructorId: string,
+  { page = 1, limit = 20 } = {},
+) => {
+  const skip = (page - 1) * limit;
+  const query: FilterQuery<IQuiz> = { instructor: instructorId };
+  return Quiz.find(query)
+    .skip(skip)
+    .limit(limit)
+    .sort({ createdAt: -1 })
+    .lean<IQuiz[]>();
 };
 
-export const calculateQuizScore = (questions: any[], answers: any[]): { score: number; results: any[] } => {
-  let score = 0;
-  const results: { question: string; correct: boolean }[] = [];
+export const create = (payload: Partial<IQuiz> & { instructor: string }) =>
+  Quiz.create(payload);
 
-  questions.forEach((question, index) => {
-    const correctAnswers = question.correctAnswers.sort().join(',');
-    const userAnswers = answers[index]?.sort().join(',');
+export const updateOwnedQuiz = (
+  quizId: string,
+  instructorId: string,
+  payload: Partial<IQuiz>,
+) => Quiz.findOneAndUpdate({ _id: quizId, instructor: instructorId }, payload, {
+  new: true,
+  runValidators: true,
+}).lean<IQuiz | null>();
 
-    if (correctAnswers === userAnswers) {
-      score += question.points || 1;
-      results.push({ question: question.text, correct: true });
-    } else {
-      results.push({ question: question.text, correct: false });
-    }
-  });
+export const deleteOwnedQuiz = (
+  quizId: string,
+  instructorId: string,
+) => Quiz.findOneAndDelete({ _id: quizId, instructor: instructorId });
 
-  return { score, results };
-};
+/* ───────────────────────── 3. Admin helper ──────────────────────────────── */
+export const hardDelete = (quizId: string) => Quiz.findByIdAndDelete(quizId);
