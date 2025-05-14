@@ -1,93 +1,86 @@
-import { Request, Response, NextFunction } from 'express';
-import User, { IUser } from '../models/User';
-import Instructor, { IInstructor } from '../models/Instructor'; // For instructor-specific validations
+import jwt from 'jsonwebtoken';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { User, UserRole, Instructor } from '../models/User';
 
-// Extend Request interface to include authenticated user
-export interface AuthenticatedRequest extends Request {
-  user?: IUser; // Includes user, admin, or instructor depending on role
-}
+const JWT_SECRET = process.env.JWT_SECRET || 'your_default_secret';
 
-// Middleware to authenticate users based on session ID
-export const authenticate = async (
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  const sessionId = req.headers.sessionid as string;
+// ─────────────────────────────────────────────────────────────
+// Authenticate middleware
+// ─────────────────────────────────────────────────────────────
 
-  if (!sessionId) {
-    res.status(401).json({ error: 'Unauthorized: Missing session ID' });
+export const authenticate: RequestHandler = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Missing or invalid token' });
+    return;
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as {
+      id: string;
+      email: string;
+      role: UserRole;
+      sessionId?: string;
+    };
+
+    req.user = decoded;
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid or expired token' });
+    return;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// Role-based middleware
+// ─────────────────────────────────────────────────────────────
+
+export const authorizeAdmin: RequestHandler = (req, res, next) => {
+  if (req.user?.role !== UserRole.ADMIN) {
+    res.status(403).json({ error: 'Admin access only' });
+    return;
+  }
+  next();
+};
+
+export const authorizeInstructor: RequestHandler = (req, res, next) => {
+  if (req.user?.role !== UserRole.INSTRUCTOR) {
+    res.status(403).json({ error: 'Instructor access only' });
+    return;
+  }
+  next();
+};
+
+export const authorizeStudent: RequestHandler = (req, res, next) => {
+  if (req.user?.role !== UserRole.STUDENT) {
+    res.status(403).json({ error: 'Student access only' });
+    return;
+  }
+  next();
+};
+
+// ─────────────────────────────────────────────────────────────
+// Ensure instructor is approved
+// ─────────────────────────────────────────────────────────────
+
+export const ensureApprovedInstructor: RequestHandler = async (req, res, next) => {
+  if (req.user?.role !== UserRole.INSTRUCTOR) {
+    res.status(403).json({ error: 'Instructor access only' });
     return;
   }
 
   try {
-    const user = await User.findOne({ sessionId });
-
-    if (!user) {
-      res.status(401).json({ error: 'Unauthorized: Invalid session ID' });
-      return;
-    }
-
-    req.user = user; // Attach authenticated user to the request object
-    next();
-  } catch (error) {
-    console.error('Authentication Error:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      details: (error as Error).message,
-    });
-  }
-};
-
-// Middleware to authorize admin users
-export const authorizeAdmin = () => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (!req.user || req.user.role !== 'admin') {
-      res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
-      return;
-    }
-
-    next();
-  };
-};
-
-// Middleware to authorize instructor users
-export const authorizeInstructor = () => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (!req.user || req.user.role !== 'instructor') {
-      res.status(403).json({ message: 'Access restricted to instructors only' });
-      return;
-    }
-
-    next();
-  };
-};
-
-export const authorizeUser = () => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (!req.user || req.user.role !== 'user') {
-      res.status(403).json({ message: 'Access restricted to users only' });
-      return;
-    }
-
-    next();
-  };
-}
-
-// Middleware to ensure a user has the instructor application approved
-export const ensureApprovedInstructor = () => {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    if (!req.user || req.user.role !== 'instructor') {
-      res.status(403).json({ message: 'Access restricted to instructors only' });
-      return;
-    }
-
-    const instructor = await Instructor.findById(req.user._id);
+    const instructor = await Instructor.findById(req.user.id).select('applicationStatus');
     if (!instructor || instructor.applicationStatus !== 'approved') {
-      res.status(403).json({ message: 'Instructor application not approved' });
+      res.status(403).json({ error: 'Instructor not approved yet' });
       return;
     }
 
     next();
-  };
+  } catch {
+    res.status(500).json({ error: 'Could not validate instructor status' });
+    return;
+  }
 };

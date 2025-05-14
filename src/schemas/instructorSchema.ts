@@ -1,17 +1,20 @@
 import Joi from 'joi';
-import { userSchema } from './userSchema';
+import { UserRole } from '../models/User';
 
-export const instructorSchema = userSchema.keys({
-  biography: Joi.string().max(500).optional().messages({
-    'string.max': 'Biography should not exceed 500 characters',
-  }),
-  expertise: Joi.string().max(200).optional().messages({
-    'string.max': 'Expertise should not exceed 200 characters',
-  }),
-  documents: Joi.array().items(Joi.string()).optional().messages({
-    'array.base': 'Documents should be an array of strings',
-  }),
-  applicationStatus: Joi.string().valid('pending', 'approved', 'rejected').optional().messages({
-    'any.only': 'Application status must be one of [pending, approved, rejected]',
-  }),
+export const instructorSchema = Joi.object({
+  name: Joi.string().min(2).max(50).required(),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).required(),
+  role: Joi.string().valid(UserRole.INSTRUCTOR).required(),
+
+  // Application fields
+  applicationStatus: Joi.string().valid('pending', 'approved', 'rejected').default('pending'),
+  biography: Joi.string().allow('').max(1000),
+  expertise: Joi.array().items(Joi.string().max(100)).optional(),
+  documents: Joi.array().items(Joi.string()).optional(),
+
+  reviewedAt: Joi.date().optional(),
+  reviewNotes: Joi.string().max(1000).optional(),
+
+  sessionId: Joi.string().optional(),
 });

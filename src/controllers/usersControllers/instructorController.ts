@@ -1,36 +1,65 @@
 import { Request, Response } from 'express';
-import Course from '../../models/Course';
-import { AuthenticatedRequest } from '../../middleware/authMiddleware'; // Ensures proper typing for authenticated requests
+import * as instructorService from '../../services/instructorService';
+import { UserRole } from '../../models/User';
 
+// ─────────────────────────────────────────────────────────────
+//  1. Apply to become an instructor (for students)
+// ─────────────────────────────────────────────────────────────
 
-export const uploadCourseMaterial = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+export const applyForInstructor = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { courseId } = req.params;
-
-    if (req.user?.role !== 'instructor') {
-      res.status(403).json({ message: 'Only instructors can upload materials' });
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    const instructorId = req.user._id;
-
-    if (!req.file) {
-      res.status(400).json({ message: 'No file uploaded' });
+    if (!req.user || req.user.role !== UserRole.STUDENT) {
+      res.status(400).json({ error: 'Only students can apply to become instructors' });
       return;
     }
 
-    const course = await Course.findOne({ _id: courseId, createdBy: instructorId });
-    if (!course) {
-      res.status(404).json({ message: 'Course not found or not owned by you' });
+    const result = await instructorService.applyForInstructor(userId, req.body);
+    res.status(200).json({ message: 'Application submitted', ...result });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message || 'Failed to apply' });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+//  2. View instructor application status
+// ─────────────────────────────────────────────────────────────
+
+export const getApplicationStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    // Add the file path to the materials array
-    course.materials = [...(course.materials || []), req.file.path];
-    await course.save();
+    const status = await instructorService.getStatus(userId);
+    res.status(200).json(status);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message || 'Failed to fetch status' });
+  }
+};
 
-    res.status(200).json({ message: 'Material uploaded successfully', materials: course.materials });
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+// ─────────────────────────────────────────────────────────────
+//  3. Instructor dashboard summary
+// ─────────────────────────────────────────────────────────────
+
+export const listMyCoursesStats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const instructorId = req.user?.id;
+    if (!instructorId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const stats = await instructorService.listMyCoursesStats(instructorId);
+    res.status(200).json(stats);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message || 'Failed to fetch course stats' });
   }
 };

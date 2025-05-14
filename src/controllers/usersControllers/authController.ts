@@ -1,98 +1,100 @@
 import { Request, Response } from 'express';
-import * as adminService from '../../services/adminService';
+import * as AuthService from '../../services/authService';
 import { UserRole } from '../../models/User';
 
 // ─────────────────────────────────────────────────────────────
-//  1. List / search users
+// POST /auth/register
 // ─────────────────────────────────────────────────────────────
-
-export const listUsers = async (req: Request, res: Response) => {
+export const register = async (req: Request, res: Response) => {
   try {
-    const { role, search, page, limit } = req.query;
+    const { name, email, password } = req.body;
 
-    const result = await adminService.listUsers({
-      role: role as UserRole,
-      search: String(search || ''),
-      page: Number(page) || 1,
-      limit: Number(limit) || 20,
+    const user = await AuthService.register({
+      name,
+      email,
+      password,
+      role: UserRole.STUDENT,
     });
 
-    res.status(200).json(result);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch users' });
-  }
-};
-
-// ─────────────────────────────────────────────────────────────
-//  2. Promote student → instructor (pending)
-// ─────────────────────────────────────────────────────────────
-
-export const promoteToInstructor = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-
-    const user = await adminService.promoteToInstructor(id);
-    res.status(200).json({
-      message: 'User promoted to instructor (pending approval)',
-      data: user,
+    res.status(201).json({
+      message: 'User registered successfully as a student',
+      user,
     });
   } catch (err) {
+    console.error('[Auth] Register error:', err);
     res.status(400).json({ error: (err as Error).message });
   }
 };
 
 // ─────────────────────────────────────────────────────────────
-//  3. Approve instructor application
+// POST /auth/login
 // ─────────────────────────────────────────────────────────────
-
-export const approveInstructor = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const { notes } = req.body;
+    const { email, password } = req.body;
+    const { user, sessionId } = await AuthService.login({ email, password });
 
-    const updated = await adminService.approveInstructor(id, notes);
-    res.status(200).json({
-      message: 'Instructor approved successfully',
-      data: updated,
-    });
+    res
+      .cookie('sessionId', sessionId, { httpOnly: true, sameSite: 'strict' })
+      .status(200)
+      .json({ message: 'Login successful', sessionId, user });
   } catch (err) {
+    console.error('[Auth] Login error:', err);
     res.status(400).json({ error: (err as Error).message });
   }
 };
 
 // ─────────────────────────────────────────────────────────────
-//  4. Revoke instructor privileges
+// POST /auth/logout
 // ─────────────────────────────────────────────────────────────
-
-export const revokeInstructor = async (req: Request, res: Response) => {
+export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
-    const { notes } = req.body;
+    const sessionId =
+      (req.cookies?.sessionId as string | undefined) ||
+      (req.headers.sessionid as string | undefined);
 
-    const updated = await adminService.revokeInstructor(id, notes);
+    if (!sessionId) {
+      res.status(401).json({ error: 'Unauthorized: No session ID provided' });
+      return;
+    }
+
+    await AuthService.logout(sessionId);
+    res.clearCookie('sessionId', { httpOnly: true }).status(200).json({ message: 'Logged out' });
+  } catch (err) {
+    console.error('[Auth] Logout error:', err);
+    res.status(500).json({ error: (err as Error).message });
+  }
+};
+
+
+// ─────────────────────────────────────────────────────────────
+// POST /auth/forgot-password
+// ─────────────────────────────────────────────────────────────
+export const requestPasswordReset = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    await AuthService.requestPasswordReset(email);
+
     res.status(200).json({
-      message: 'Instructor privileges revoked',
-      data: updated,
+      message: 'If that email exists, a reset link has been sent.',
     });
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    console.error('[Auth] Password-reset request error:', err);
+    res.status(500).json({ error: (err as Error).message });
   }
 };
 
 // ─────────────────────────────────────────────────────────────
-//  5. Promote user → admin
+// POST /auth/reset-password
 // ─────────────────────────────────────────────────────────────
-
-export const promoteToAdmin = async (req: Request, res: Response) => {
+export const resetPassword = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { token, newPassword } = req.body;
+    await AuthService.resetPassword(token, newPassword);
 
-    const user = await adminService.promoteToAdmin(id);
-    res.status(200).json({
-      message: 'User promoted to admin successfully',
-      data: user,
-    });
+    res.status(200).json({ message: 'Password updated. You can now log in.' });
   } catch (err) {
+    console.error('[Auth] Password-reset error:', err);
     res.status(400).json({ error: (err as Error).message });
   }
 };
